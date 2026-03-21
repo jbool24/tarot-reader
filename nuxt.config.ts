@@ -14,7 +14,7 @@ export default defineNuxtConfig({
       title: 'Mystic Tarot Reader',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'description', content: 'Consult the cards and reveal your destiny with our mystical AI-powered Tarot Reader.' },
       ],
     },
