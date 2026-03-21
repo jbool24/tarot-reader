@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write src/**",
+      "Write tests/**",
+      "Write prompts/**",
+      "Write workflows/**",
+      "Write docs/**",
+      "Execute deno task *",
+      "Execute deno test *",
+      "Execute deno fmt *",
+      "Execute deno lint *",
+      "Execute docker compose *",
+      "Execute curl *",
+      "Execute redis-cli *"
+    ],
+    "deny": [
+      "Write .env*",
+      "Write infra/environments/prod/**",
+      "Execute rm -rf *",
+      "Execute git push *",
+      "Execute deno install --global *"
+    ]
+  }
+}
