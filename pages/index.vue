@@ -109,6 +109,17 @@
       </div>
     </div>
 
+    <!-- Mobile FAB: reopen drawer when it is closed but messages exist -->
+    <button
+      v-if="(messages.length || loading) && !drawerOpen"
+      class="mobile-reading-fab"
+      @click="drawerOpen = true"
+      aria-label="Open reading"
+    >
+      <span class="fab-icon">✨</span>
+      <span class="fab-label">Reading</span>
+    </button>
+
     <!-- Reading drawer — slides in from the right -->
     <aside class="reading-drawer" :class="{ open: drawerOpen, wide: drawerWide }">
       <!-- Tab handle — sticks out from the left edge, visible when there are messages -->
@@ -294,6 +305,7 @@ async function submitQuestion() {
   userInput.value = ''
   loading.value = true
   reading.value = true
+  drawerOpen.value = true
 
   if (textareaRef.value) textareaRef.value.style.height = 'auto'
 
@@ -372,6 +384,8 @@ body {
   color: #e8dcc8;
   font-family: 'Crimson Text', Georgia, serif;
 }
+
+
 </style>
 
 <style scoped>
@@ -795,7 +809,7 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  height: 100vh;
+  height: 100dvh;
   width: min(420px, 90vw);
   z-index: 100;
   transform: translateX(100%);
@@ -1038,10 +1052,59 @@ body {
   border-top: 1px solid #c9a84c22;
 }
 
-/* Mobile adjustments */
+/* ── Mobile reading FAB ─────────────────────────────────────────────── */
+.mobile-reading-fab {
+  display: none;
+}
+
+/* ── Mobile adjustments ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  /*
+   * Strategy: make .tarot-app the scroll container instead of html/body.
+   * html/body stay overflow:hidden (unchanged). .tarot-app gets a fixed
+   * viewport height and scrolls internally. This is the most reliable
+   * approach across iOS Safari versions.
+   */
+  .tarot-app {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /*
+   * content-wrapper: height:auto so it can grow beyond the viewport
+   * and the parent (.tarot-app) will scroll to reveal it.
+   * Bottom padding reserves space for the fixed input bar.
+   */
+  .content-wrapper {
+    height: auto;
+    min-height: 100%;
+    padding-bottom: 5.5rem;
+  }
+
+  /*
+   * reading-area: stop using flex:1 / min-height:0 which squashes
+   * content into the available space. Let it be naturally sized so the
+   * crystal ball + welcome text + chips can breathe.
+   */
+  .reading-area {
+    flex: 0 0 auto;
+    min-height: unset;
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+  }
+
+  .welcome-state {
+    gap: 1rem;
+    padding: 0.5rem 0;
+  }
+
   .card-spread {
     gap: 0.35rem;
+    padding: 0.5rem 0;
   }
 
   .tarot-card-deco {
@@ -1050,28 +1113,121 @@ body {
   }
 
   .header {
-    padding: 1rem 0 0.25rem;
+    padding: 0.75rem 0 0.25rem;
+  }
+
+  .moon-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .ornament {
+    display: none;
+  }
+
+  .crystal-ball {
+    font-size: 2.5rem;
+  }
+
+  .welcome-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding: 0 0.5rem;
   }
 
   .suggestion-chips {
     flex-direction: column;
     align-items: center;
+    gap: 0.4rem;
   }
 
+  .chip {
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  /* Fixed input bar — pinned to the bottom of the viewport */
+  .input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(0deg, #0d0d2b 80%, transparent 100%);
+    z-index: 10;
+  }
+
+  /* Drawer: full width, full dynamic viewport height */
   .reading-drawer {
     width: 100vw;
+    height: 100dvh;
   }
 
+  /* Hide the side-tab on mobile — we use the FAB instead */
   .drawer-tab {
-    /* on mobile the tab sits at the top-right as a floating button instead */
-    right: auto;
-    left: auto;
-    top: auto;
-    bottom: 5rem;
-    right: 0;
-    transform: none;
-    border-radius: 8px 0 0 8px;
-    padding: 0.75rem 0.6rem;
+    display: none;
+  }
+
+  /* Hide wide-toggle button (already full width on mobile) */
+  .drawer-header-actions .drawer-action-btn:first-child {
+    display: none;
+  }
+
+  /* Floating action button — visible when drawer is closed */
+  .mobile-reading-fab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: fixed;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    right: 1rem;
+    z-index: 150;
+    background: linear-gradient(135deg, #c9a84c, #a08030);
+    color: #0a0a1a;
+    border: none;
+    border-radius: 50px;
+    padding: 0.7rem 1.2rem;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 24px #c9a84c66;
+    animation: fabGlow 2s ease-in-out infinite;
+  }
+
+  .mobile-reading-fab .fab-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  @keyframes fabGlow {
+    0%, 100% { box-shadow: 0 4px 20px #c9a84c55; }
+    50% { box-shadow: 0 4px 32px #c9a84c99; }
+  }
+
+  /* Card table: shrink cells further and allow horizontal scroll if needed */
+  .card-table {
+    --cw: clamp(26px, 7.5vw, 48px);
+    overflow-x: auto;
+    max-width: 100vw;
+    padding: 0.5rem 0;
+  }
+
+  /* Card tooltips: keep them on-screen */
+  .card-tooltip {
+    width: clamp(100px, 40vw, 160px);
+  }
+
+  /* Drawer input area: account for iOS home indicator */
+  .drawer-input-area {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>
