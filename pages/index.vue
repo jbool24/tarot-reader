@@ -2,12 +2,12 @@
   <div class="tarot-app">
     <!-- Animated stars background -->
     <div class="stars-container">
-      <div v-for="n in 60" :key="n" class="star" :style="randomStarStyle()" />
+      <div v-for="(style, i) in starStyles" :key="i" class="star" :style="style" />
     </div>
 
     <!-- Floating mystic particles -->
     <div class="particles-container">
-      <div v-for="n in 15" :key="'p' + n" class="particle" :style="randomParticleStyle()" />
+      <div v-for="(style, i) in particleStyles" :key="'p' + i" class="particle" :style="style" />
     </div>
 
     <div class="content-wrapper">
@@ -19,8 +19,8 @@
         <div class="ornament">&#10045; &#10047; &#10045;</div>
       </header>
 
-      <!-- Card spread decoration -->
-      <div class="card-spread">
+      <!-- Card spread decoration (only shown before a hand is dealt) -->
+      <div v-if="!hand" class="card-spread">
         <div
           v-for="(card, i) in decorativeCards"
           :key="i"
@@ -34,38 +34,38 @@
         </div>
       </div>
 
-      <!-- Chat / Reading area -->
+      <!-- Main area: card table + welcome state -->
       <main class="reading-area">
-        <div v-if="messages.length" class="messages-container" ref="messagesContainer">
+        <!-- 15-card spread table — always in DOM, hidden until hand is dealt -->
+        <div class="card-table" :style="{ display: hand ? 'grid' : 'none' }">
           <div
-            v-for="(msg, i) in messages"
-            :key="i"
-            class="message"
-            :class="msg.role"
+            v-for="[pos, row, col] in CARD_GRID"
+            :key="pos"
+            class="spread-card"
+            :class="{ flipped: flippedCards.has(pos) }"
+            :style="{ gridRow: row, gridColumn: col }"
           >
-            <div class="message-icon">
-              {{ msg.role === 'user' ? '🔮' : '✨' }}
-            </div>
-            <div class="message-content">
-              <div class="message-text" v-html="formatMessage(msg.content)" />
-            </div>
-          </div>
-
-          <!-- Loading indicator -->
-          <div v-if="loading" class="message assistant">
-            <div class="message-icon">✨</div>
-            <div class="message-content">
-              <div class="loading-orbs">
-                <span class="orb" />
-                <span class="orb" />
-                <span class="orb" />
+            <div class="card-inner">
+              <div class="spread-face card-back">
+                <img src="/deck/CardBacks.png" alt="Card back" />
               </div>
+              <div class="spread-face card-front" :class="{ reversed: hand?.[pos]?.reversed }">
+                <img :src="hand?.[pos]?.image_url" :alt="`Position ${pos}`" />
+              </div>
+            </div>
+            <!-- Tooltip — only appears after the card has flipped -->
+            <div v-if="flippedCards.has(pos) && hand?.[pos]" class="card-tooltip">
+              <div class="card-tooltip-name">
+                {{ hand[pos].name }}
+                <span v-if="hand[pos].reversed" class="card-tooltip-reversed">↑ Reversed</span>
+              </div>
+              <div class="card-tooltip-meaning">{{ hand[pos].meaning }}</div>
             </div>
           </div>
         </div>
 
         <!-- Welcome state -->
-        <div v-else class="welcome-state">
+        <div v-if="!hand" class="welcome-state">
           <div class="crystal-ball">🔮</div>
           <p class="welcome-text">
             The cards await your question, dear seeker.<br />
@@ -84,8 +84,8 @@
         </div>
       </main>
 
-      <!-- Input area -->
-      <div class="input-area">
+      <!-- Input area — only shown before a hand is dealt; moves into drawer after -->
+      <div v-if="!hand" class="input-area">
         <div class="input-wrapper">
           <textarea
             v-model="userInput"
@@ -108,6 +108,85 @@
         <p class="input-hint">Press Enter to consult the cards</p>
       </div>
     </div>
+
+    <!-- Reading drawer — slides in from the right -->
+    <aside class="reading-drawer" :class="{ open: drawerOpen, wide: drawerWide }">
+      <!-- Tab handle — sticks out from the left edge, visible when there are messages -->
+      <button
+        v-if="messages.length || loading"
+        class="drawer-tab"
+        :class="{ attention: hasUnread }"
+        @click="drawerOpen = !drawerOpen"
+        :title="drawerOpen ? 'Close reading' : 'Open reading'"
+      >
+        <span class="drawer-tab-icon">{{ drawerOpen ? '✕' : '✨' }}</span>
+        <span v-if="!drawerOpen" class="drawer-tab-label">Reading</span>
+      </button>
+
+      <div class="drawer-inner">
+        <div class="drawer-header">
+          <span class="drawer-title">✨ The Mystic Speaks</span>
+          <div class="drawer-header-actions">
+            <button
+              class="drawer-action-btn"
+              @click="drawerWide = !drawerWide"
+              :title="drawerWide ? 'Narrow view' : 'Wide view'"
+            >{{ drawerWide ? '⇥⇤' : '⇤⇥' }}</button>
+            <button class="drawer-action-btn" @click="drawerOpen = false" title="Close">✕</button>
+          </div>
+        </div>
+
+        <div class="messages-container" ref="messagesContainer">
+          <div
+            v-for="(msg, i) in messages"
+            :key="i"
+            class="message"
+            :class="msg.role"
+          >
+            <div class="message-icon">{{ msg.role === 'user' ? '🔮' : '✨' }}</div>
+            <div class="message-content">
+              <div class="message-text" v-html="formatMessage(msg.content)" />
+            </div>
+          </div>
+
+          <!-- Loading indicator -->
+          <div v-if="loading" class="message assistant">
+            <div class="message-icon">✨</div>
+            <div class="message-content">
+              <div class="loading-orbs">
+                <span class="orb" />
+                <span class="orb" />
+                <span class="orb" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input lives in the drawer once a hand has been dealt -->
+        <div v-if="hand" class="drawer-input-area">
+          <div class="input-wrapper">
+            <textarea
+              v-model="userInput"
+              :placeholder="inputPlaceholder"
+              class="question-input"
+              :disabled="loading"
+              rows="1"
+              @keydown.enter.exact.prevent="submitQuestion"
+              @input="autoResize"
+              ref="textareaRef"
+            />
+            <button
+              class="submit-btn"
+              :disabled="!userInput.trim() || loading"
+              @click="submitQuestion"
+            >
+              <span class="btn-icon">&#10024;</span>
+            </button>
+          </div>
+          <p class="input-hint">Press Enter to ask another question</p>
+        </div>
+      </div>
+    </aside>
   </div>
 </template>
 
@@ -117,10 +196,40 @@ interface Message {
   content: string
 }
 
+interface Card {
+  name: string
+  reversed: boolean
+  suit: 'cups' | 'wands' | 'pentacles' | 'swords' | 'arcana'
+  meaning: string
+  image_url: string
+}
+
+type Hand = Record<number, Card>
+
+// [position, gridRow, gridColumn] in a 9-column × 3-row grid
+// Row 1: [13][9][5]  ···  [4][8][12]
+// Row 2:       [2][1][3]
+// Row 3: [14][10][6]  ···  [7][11][15]
+const CARD_GRID: [number, number, number][] = [
+  [13, 1, 1], [9,  1, 2], [5,  1, 3],
+  [4,  1, 7], [8,  1, 8], [12, 1, 9],
+  [2,  2, 4], [1,  2, 5], [3,  2, 6],
+  [14, 3, 1], [10, 3, 2], [6,  3, 3],
+  [7,  3, 7], [11, 3, 8], [15, 3, 9],
+]
+
 const userInput = ref('')
 const messages = ref<Message[]>([])
 const loading = ref(false)
 const reading = ref(false)
+const drawerOpen = ref(false)
+const drawerWide = ref(false)
+const hasUnread = ref(false)
+const hand = ref<Hand | null>(null)
+
+// Clear the attention state as soon as the drawer is opened
+watch(drawerOpen, (open) => { if (open) hasUnread.value = false })
+const flippedCards = reactive(new Set<number>())
 const messagesContainer = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
@@ -141,25 +250,21 @@ const suggestions = [
 
 const inputPlaceholder = 'Ask the cards your question...'
 
-function randomStarStyle() {
-  return {
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    animationDelay: `${Math.random() * 4}s`,
-    animationDuration: `${2 + Math.random() * 3}s`,
-    width: `${1 + Math.random() * 3}px`,
-    height: `${1 + Math.random() * 3}px`,
-  }
-}
+const starStyles = Array.from({ length: 60 }, () => ({
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+  animationDelay: `${Math.random() * 4}s`,
+  animationDuration: `${2 + Math.random() * 3}s`,
+  width: `${1 + Math.random() * 3}px`,
+  height: `${1 + Math.random() * 3}px`,
+}))
 
-function randomParticleStyle() {
-  return {
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    animationDelay: `${Math.random() * 6}s`,
-    animationDuration: `${8 + Math.random() * 12}s`,
-  }
-}
+const particleStyles = Array.from({ length: 15 }, () => ({
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+  animationDelay: `${Math.random() * 6}s`,
+  animationDuration: `${8 + Math.random() * 12}s`,
+}))
 
 function formatMessage(text: string): string {
   return text
@@ -190,29 +295,42 @@ async function submitQuestion() {
   loading.value = true
   reading.value = true
 
-  // Reset textarea height
-  if (textareaRef.value) {
-    textareaRef.value.style.height = 'auto'
-  }
-
-  await nextTick()
-  scrollToBottom()
+  if (textareaRef.value) textareaRef.value.style.height = 'auto'
 
   try {
-    const response = await $fetch('/api/tarot', {
-      method: 'POST',
-      body: {
-        messages: messages.value.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      },
+    // Initial reading: draw cards first so we can send structured JSON to the API
+    if (!hand.value) {
+      const drawnHand = await $fetch<Hand>('/api/draw')
+      hand.value = drawnHand
+      flippedCards.clear()
+      await nextTick()
+      for (let pos = 1; pos <= 15; pos++) {
+        setTimeout(() => flippedCards.add(pos), 100 + pos * 200)
+      }
+    }
+
+    // Build the API message list:
+    // - First user message is always the structured ReadingInput JSON
+    // - Subsequent messages are plain text
+    const currentHand = hand.value
+    const apiMessages = messages.value.map((m, i) => {
+      if (i === 0 && m.role === 'user') {
+        return {
+          role: 'user' as const,
+          content: JSON.stringify({ query: m.content, hand: currentHand }),
+        }
+      }
+      return { role: m.role, content: m.content }
     })
 
-    messages.value.push({
-      role: 'assistant',
-      content: response.reply,
+    const response = await $fetch<{ reply: string }>('/api/tarot', {
+      method: 'POST',
+      body: { messages: apiMessages },
     })
+
+    messages.value.push({ role: 'assistant', content: response.reply })
+    // Signal the tab to bounce if the drawer is still closed
+    if (!drawerOpen.value) hasUnread.value = true
   } catch {
     messages.value.push({
       role: 'assistant',
@@ -318,8 +436,6 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-width: 800px;
-  margin: 0 auto;
   width: 100%;
   padding: 0 1rem;
 }
@@ -364,7 +480,7 @@ body {
   margin-top: 0.25rem;
 }
 
-/* Card spread */
+/* Card spread decoration */
 .card-spread {
   display: flex;
   justify-content: center;
@@ -386,6 +502,12 @@ body {
   transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition-delay: var(--delay);
   box-shadow: 0 2px 15px #0008, 0 0 10px #c9a84c22;
+  perspective: 600px;
+}
+
+.tarot-card-deco:hover {
+  transform: perspective(600px) rotate(var(--rotation)) rotateY(180deg);
+  transition-delay: 0s;
 }
 
 .tarot-card-deco.card-revealed {
@@ -399,18 +521,410 @@ body {
   color: #c9a84c;
 }
 
-/* Reading / Messages area */
+/* Main reading area */
 .reading-area {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Welcome state */
+.welcome-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.crystal-ball {
+  font-size: 4rem;
+  animation: bobble 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px #c9a84c44);
+}
+
+@keyframes bobble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.welcome-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #a89bc2;
+  max-width: 500px;
+}
+
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  max-width: 500px;
+}
+
+.chip {
+  background: linear-gradient(135deg, #1e1545cc, #2a1f5ecc);
+  border: 1px solid #c9a84c44;
+  color: #e8dcc8;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.chip:hover {
+  border-color: #c9a84c;
+  background: linear-gradient(135deg, #2a1f5e, #3a2f7e);
+  box-shadow: 0 0 15px #c9a84c33;
+  transform: translateY(-1px);
+}
+
+/* Input area */
+.input-area {
+  flex-shrink: 0;
+  padding: 0.75rem 0 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  background: linear-gradient(135deg, #15102e, #1c1640);
+  border: 1px solid #c9a84c44;
+  border-radius: 16px;
+  padding: 0.5rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: #c9a84c88;
+  box-shadow: 0 0 20px #c9a84c22;
+}
+
+.question-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e8dcc8;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 1.05rem;
+  padding: 0.5rem;
+  resize: none;
+  line-height: 1.5;
+  max-height: 120px;
+}
+
+.question-input::placeholder {
+  color: #a89bc266;
+  font-style: italic;
+}
+
+.submit-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #c9a84c, #a08030);
+  color: #0a0a1a;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f4e4a0, #c9a84c);
+  box-shadow: 0 0 20px #c9a84c44;
+  transform: scale(1.05);
+}
+
+.submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  line-height: 1;
+}
+
+.input-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #a89bc244;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* ── Card table — responsive 15-card spread ─────────────────────────── */
+.card-table {
+  /* card width scales with viewport; aspect ratio ~1:1.54 (tarot proportions) */
+  --cw: clamp(36px, 7.5vw, 80px);
+  --ch: calc(var(--cw) * 1.54);
+  --cg: clamp(3px, 0.5vw, 8px);
+
+  grid-template-columns: repeat(9, var(--cw));
+  grid-template-rows: repeat(3, var(--ch));
+  gap: var(--cg);
+  justify-content: center;
+  padding: 1rem 0;
+  flex-shrink: 0;
+}
+
+.spread-card {
+  width: var(--cw);
+  height: var(--ch);
+  perspective: 600px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.spread-card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.spread-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 4px;
   overflow: hidden;
+  border: 1px solid #c9a84c33;
+  box-shadow: 0 2px 8px #0006;
+}
+
+.spread-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Front face starts rotated away; becomes visible on flip */
+.card-front {
+  transform: rotateY(180deg);
+}
+
+.card-front.reversed img {
+  transform: rotate(180deg);
+}
+
+/* Card hover — scale up toward the viewer */
+.spread-card {
+  position: relative;
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+
+.spread-card:hover {
+  transform: scale(1.28);
+  z-index: 20;
+}
+
+/* Card tooltip */
+.card-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(140px, 18vw, 200px);
+  background: linear-gradient(160deg, #0d0921f0, #1e1545f0);
+  border: 1px solid #c9a84c66;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 50;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 24px #00000099;
+}
+
+.spread-card:hover .card-tooltip {
+  opacity: 1;
+}
+
+.card-tooltip-name {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.6rem;
+  color: #c9a84c;
+  margin-bottom: 0.3rem;
+  line-height: 1.3;
+}
+
+.card-tooltip-reversed {
+  display: block;
+  font-size: 0.55rem;
+  color: #a89bc2;
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  margin-top: 0.1rem;
+}
+
+.card-tooltip-meaning {
+  font-size: 0.62rem;
+  color: #e8dcc8bb;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── Reading drawer ─────────────────────────────────────────────────── */
+.reading-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 90vw);
+  z-index: 100;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s ease;
+  background: linear-gradient(180deg, #0d0921f0 0%, #120d2af2 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid #c9a84c33;
+  box-shadow: -10px 0 50px #00000099;
   display: flex;
   flex-direction: column;
 }
 
+.reading-drawer.open {
+  transform: translateX(0);
+}
+
+.reading-drawer.wide {
+  width: 50dvw;
+}
+
+/* Vertical tab handle — sticks out from the drawer's left edge */
+.drawer-tab {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #1e1545, #2a1f5e);
+  border: 1px solid #c9a84c55;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: #c9a84c;
+  cursor: pointer;
+  padding: 1rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: -4px 0 20px #00000066;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.drawer-tab:hover {
+  background: linear-gradient(180deg, #2a1f5e, #3a2f7e);
+  box-shadow: -4px 0 28px #c9a84c22;
+}
+
+/* Bounce left to beckon the reader when a response is waiting */
+@keyframes tabAttention {
+  0%, 55%, 100% { transform: translateY(-50%) translateX(0); }
+  10%  { transform: translateY(-50%) translateX(-10px); }
+  20%  { transform: translateY(-50%) translateX(-5px); }
+  30%  { transform: translateY(-50%) translateX(-10px); }
+  40%  { transform: translateY(-50%) translateX(-5px); }
+  50%  { transform: translateY(-50%) translateX(-10px); }
+}
+
+.drawer-tab.attention {
+  animation: tabAttention 2.4s ease-in-out infinite;
+  border-color: #c9a84c99;
+  box-shadow: -4px 0 28px #c9a84c55;
+}
+
+.drawer-tab-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.drawer-tab-label {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  color: #c9a84ccc;
+}
+
+.drawer-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.drawer-header {
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid #c9a84c22;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.85rem;
+  color: #c9a84c;
+  letter-spacing: 0.06em;
+}
+
+.drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.drawer-action-btn {
+  background: none;
+  border: none;
+  color: #a89bc2;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+  line-height: 1;
+}
+
+.drawer-action-btn:hover {
+  color: #c9a84c;
+  background: #c9a84c11;
+}
+
+/* Messages inside drawer */
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0;
+  padding: 1rem 1.25rem;
   scroll-behavior: smooth;
 }
 
@@ -499,140 +1013,29 @@ body {
   50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Welcome state */
-.welcome-state {
-  flex: 1;
+/* Wide drawer — centre content with max-width */
+.reading-drawer.wide .messages-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 1.5rem;
 }
 
-.crystal-ball {
-  font-size: 4rem;
-  animation: bobble 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px #c9a84c44);
+.reading-drawer.wide .message {
+  width: 100%;
+  max-width: 680px;
 }
 
-@keyframes bobble {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.reading-drawer.wide .drawer-input-area {
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.welcome-text {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #a89bc2;
-  max-width: 500px;
-}
-
-.suggestion-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  max-width: 500px;
-}
-
-.chip {
-  background: linear-gradient(135deg, #1e1545cc, #2a1f5ecc);
-  border: 1px solid #c9a84c44;
-  color: #e8dcc8;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-family: 'Crimson Text', Georgia, serif;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.chip:hover {
-  border-color: #c9a84c;
-  background: linear-gradient(135deg, #2a1f5e, #3a2f7e);
-  box-shadow: 0 0 15px #c9a84c33;
-  transform: translateY(-1px);
-}
-
-/* Input area */
-.input-area {
+/* Input inside the drawer */
+.drawer-input-area {
   flex-shrink: 0;
-  padding: 0.75rem 0 1.5rem;
-}
-
-.input-wrapper {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-end;
-  background: linear-gradient(135deg, #15102e, #1c1640);
-  border: 1px solid #c9a84c44;
-  border-radius: 16px;
-  padding: 0.5rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.input-wrapper:focus-within {
-  border-color: #c9a84c88;
-  box-shadow: 0 0 20px #c9a84c22;
-}
-
-.question-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #e8dcc8;
-  font-family: 'Crimson Text', Georgia, serif;
-  font-size: 1.05rem;
-  padding: 0.5rem;
-  resize: none;
-  line-height: 1.5;
-  max-height: 120px;
-}
-
-.question-input::placeholder {
-  color: #a89bc266;
-  font-style: italic;
-}
-
-.submit-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #c9a84c, #a08030);
-  color: #0a0a1a;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f4e4a0, #c9a84c);
-  box-shadow: 0 0 20px #c9a84c44;
-  transform: scale(1.05);
-}
-
-.submit-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-icon {
-  line-height: 1;
-}
-
-.input-hint {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #a89bc244;
-  margin-top: 0.5rem;
-  font-style: italic;
+  padding: 0.75rem 1.25rem 1.25rem;
+  border-top: 1px solid #c9a84c22;
 }
 
 /* Mobile adjustments */
@@ -653,6 +1056,22 @@ body {
   .suggestion-chips {
     flex-direction: column;
     align-items: center;
+  }
+
+  .reading-drawer {
+    width: 100vw;
+  }
+
+  .drawer-tab {
+    /* on mobile the tab sits at the top-right as a floating button instead */
+    right: auto;
+    left: auto;
+    top: auto;
+    bottom: 5rem;
+    right: 0;
+    transform: none;
+    border-radius: 8px 0 0 8px;
+    padding: 0.75rem 0.6rem;
   }
 }
 </style>
