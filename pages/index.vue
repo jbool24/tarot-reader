@@ -109,6 +109,17 @@
       </div>
     </div>
 
+    <!-- Mobile FAB: reopen drawer when it is closed but messages exist -->
+    <button
+      v-if="(messages.length || loading) && !drawerOpen"
+      class="mobile-reading-fab"
+      @click="drawerOpen = true"
+      aria-label="Open reading"
+    >
+      <span class="fab-icon">✨</span>
+      <span class="fab-label">Reading</span>
+    </button>
+
     <!-- Reading drawer — slides in from the right -->
     <aside class="reading-drawer" :class="{ open: drawerOpen, wide: drawerWide }">
       <!-- Tab handle — sticks out from the left edge, visible when there are messages -->
@@ -294,6 +305,7 @@ async function submitQuestion() {
   userInput.value = ''
   loading.value = true
   reading.value = true
+  drawerOpen.value = true
 
   if (textareaRef.value) textareaRef.value.style.height = 'auto'
 
@@ -371,6 +383,17 @@ body {
   background: #0a0a1a;
   color: #e8dcc8;
   font-family: 'Crimson Text', Georgia, serif;
+}
+
+/* Mobile: allow the page to scroll naturally */
+@media (max-width: 640px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
 }
 </style>
 
@@ -795,7 +818,7 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  height: 100vh;
+  height: 100dvh;
   width: min(420px, 90vw);
   z-index: 100;
   transform: translateX(100%);
@@ -1038,8 +1061,26 @@ body {
   border-top: 1px solid #c9a84c22;
 }
 
-/* Mobile adjustments */
+/* ── Mobile reading FAB ─────────────────────────────────────────────── */
+.mobile-reading-fab {
+  display: none;
+}
+
+/* ── Mobile adjustments ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  /* Allow the app container to grow with content */
+  .tarot-app {
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Let content scroll; add bottom padding for sticky input */
+  .content-wrapper {
+    height: auto;
+    min-height: 100svh;
+    padding-bottom: 5.5rem;
+  }
+
   .card-spread {
     gap: 0.35rem;
   }
@@ -1050,7 +1091,20 @@ body {
   }
 
   .header {
-    padding: 1rem 0 0.25rem;
+    padding: 0.75rem 0 0.25rem;
+  }
+
+  .moon-icon {
+    font-size: 1.5rem;
+  }
+
+  .crystal-ball {
+    font-size: 3rem;
+  }
+
+  .welcome-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
   .suggestion-chips {
@@ -1058,20 +1112,81 @@ body {
     align-items: center;
   }
 
-  .reading-drawer {
-    width: 100vw;
+  .chip {
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
   }
 
-  .drawer-tab {
-    /* on mobile the tab sits at the top-right as a floating button instead */
-    right: auto;
-    left: auto;
-    top: auto;
-    bottom: 5rem;
+  /* Sticky input at the bottom of the viewport */
+  .input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
     right: 0;
-    transform: none;
-    border-radius: 8px 0 0 8px;
-    padding: 0.75rem 0.6rem;
+    padding: 0.5rem 1rem 1rem;
+    background: linear-gradient(0deg, #0d0d2b 70%, transparent 100%);
+    z-index: 10;
+  }
+
+  /* Drawer: full width, full dynamic viewport height */
+  .reading-drawer {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  /* Hide the side-tab on mobile — we use the FAB instead */
+  .drawer-tab {
+    display: none;
+  }
+
+  /* Hide wide-toggle button on mobile (already full width) */
+  .drawer-header-actions .drawer-action-btn:first-child {
+    display: none;
+  }
+
+  /* Floating action button — visible on mobile only when drawer is closed */
+  .mobile-reading-fab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: fixed;
+    bottom: 5.5rem;
+    right: 1rem;
+    z-index: 150;
+    background: linear-gradient(135deg, #c9a84c, #a08030);
+    color: #0a0a1a;
+    border: none;
+    border-radius: 50px;
+    padding: 0.7rem 1.2rem;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 24px #c9a84c66;
+    animation: fabGlow 2s ease-in-out infinite;
+  }
+
+  .mobile-reading-fab .fab-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  @keyframes fabGlow {
+    0%, 100% { box-shadow: 0 4px 20px #c9a84c55; }
+    50% { box-shadow: 0 4px 32px #c9a84c99; }
+  }
+
+  /* Ensure card table doesn't overflow horizontally */
+  .card-table {
+    --cw: clamp(28px, 8vw, 52px);
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  /* Card tooltips: keep them on-screen */
+  .card-tooltip {
+    width: clamp(100px, 40vw, 160px);
   }
 }
 </style>
