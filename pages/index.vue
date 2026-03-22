@@ -40,11 +40,11 @@
         <div class="card-table" :style="{ display: hand ? 'grid' : 'none' }">
 
           <!-- Row headers — hidden on desktop, shown on mobile -->
-          <div class="spread-row-header spread-row-header--future-a">Potential Future A</div>
-          <div class="spread-row-header spread-row-header--future-b">Potential Future B</div>
           <div class="spread-row-header spread-row-header--heart">The Heart of the Matter</div>
           <div class="spread-row-header spread-row-header--mirror">The Mirror Within</div>
           <div class="spread-row-header spread-row-header--fate">The Wheel of Fate</div>
+          <div class="spread-row-header spread-row-header--future-b">Future B — If No Action Taken</div>
+          <div class="spread-row-header spread-row-header--future-a">Future A — If Action Taken</div>
 
           <div
             v-for="[pos, row, col] in CARD_GRID"
@@ -1285,29 +1285,29 @@ body {
     background: linear-gradient(270deg, transparent, #c9a84c55);
   }
 
-  /* Header placement */
-  .spread-row-header--future-a { grid-row: 1; }
-  .spread-row-header--future-b { grid-row: 3; }
-  .spread-row-header--heart    { grid-row: 5; }
-  .spread-row-header--mirror   { grid-row: 7; }
-  .spread-row-header--fate     { grid-row: 9; }
+  /* Header placement — interpretation order */
+  .spread-row-header--heart    { grid-row: 1; }
+  .spread-row-header--mirror   { grid-row: 3; }
+  .spread-row-header--fate     { grid-row: 5; }
+  .spread-row-header--future-b { grid-row: 7; }
+  .spread-row-header--future-a { grid-row: 9; }
 
   /* Card placement — override inline gridRow/gridColumn */
-  .card-table .spread-card[data-pos="13"] { grid-row: 2 !important; grid-column: 1 !important; }
-  .card-table .spread-card[data-pos="9"]  { grid-row: 2 !important; grid-column: 2 !important; }
-  .card-table .spread-card[data-pos="5"]  { grid-row: 2 !important; grid-column: 3 !important; }
-  .card-table .spread-card[data-pos="4"]  { grid-row: 4 !important; grid-column: 1 !important; }
-  .card-table .spread-card[data-pos="8"]  { grid-row: 4 !important; grid-column: 2 !important; }
-  .card-table .spread-card[data-pos="12"] { grid-row: 4 !important; grid-column: 3 !important; }
-  .card-table .spread-card[data-pos="2"]  { grid-row: 6 !important; grid-column: 1 !important; }
-  .card-table .spread-card[data-pos="1"]  { grid-row: 6 !important; grid-column: 2 !important; }
-  .card-table .spread-card[data-pos="3"]  { grid-row: 6 !important; grid-column: 3 !important; }
-  .card-table .spread-card[data-pos="14"] { grid-row: 8 !important; grid-column: 1 !important; }
-  .card-table .spread-card[data-pos="10"] { grid-row: 8 !important; grid-column: 2 !important; }
-  .card-table .spread-card[data-pos="6"]  { grid-row: 8 !important; grid-column: 3 !important; }
-  .card-table .spread-card[data-pos="7"]  { grid-row: 10 !important; grid-column: 1 !important; }
-  .card-table .spread-card[data-pos="11"] { grid-row: 10 !important; grid-column: 2 !important; }
-  .card-table .spread-card[data-pos="15"] { grid-row: 10 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="2"]  { grid-row: 2 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="1"]  { grid-row: 2 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="3"]  { grid-row: 2 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="14"] { grid-row: 4 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="10"] { grid-row: 4 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="6"]  { grid-row: 4 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="7"]  { grid-row: 6 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="11"] { grid-row: 6 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="15"] { grid-row: 6 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="4"]  { grid-row: 8 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="8"]  { grid-row: 8 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="12"] { grid-row: 8 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="13"] { grid-row: 10 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="9"]  { grid-row: 10 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="5"]  { grid-row: 10 !important; grid-column: 3 !important; }
 
   /* Card tooltips: keep them on-screen */
   .card-tooltip {
