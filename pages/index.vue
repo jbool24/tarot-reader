@@ -39,10 +39,18 @@
         <!-- 15-card spread table — always in DOM, hidden until hand is dealt -->
         <div class="card-table" :style="{ display: hand ? 'grid' : 'none' }">
 
+          <!-- Row headers — hidden on desktop, shown on mobile -->
+          <div class="spread-row-header spread-row-header--future-a">Potential Future A</div>
+          <div class="spread-row-header spread-row-header--future-b">Potential Future B</div>
+          <div class="spread-row-header spread-row-header--heart">The Heart of the Matter</div>
+          <div class="spread-row-header spread-row-header--mirror">The Mirror Within</div>
+          <div class="spread-row-header spread-row-header--fate">The Wheel of Fate</div>
+
           <div
             v-for="[pos, row, col] in CARD_GRID"
             :key="pos"
             class="spread-card"
+            :data-pos="pos"
             :class="{ flipped: flippedCards.has(pos) }"
             :style="{ gridRow: row, gridColumn: col }"
           >
@@ -724,9 +732,9 @@ body {
 /* ── Card table — responsive 15-card spread ─────────────────────────── */
 .card-table {
   /* card width scales with viewport; aspect ratio ~1:1.54 (tarot proportions) */
-  --cw: clamp(72px, 15vw, 160px);
+  --cw: clamp(36px, 7.5vw, 80px);
   --ch: calc(var(--cw) * 1.54);
-  --cg: clamp(6px, 1vw, 16px);
+  --cg: clamp(3px, 0.5vw, 8px);
 
   grid-template-columns: repeat(9, var(--cw));
   grid-template-rows: repeat(3, var(--ch));
@@ -734,6 +742,11 @@ body {
   justify-content: center;
   padding: 1rem 0;
   flex-shrink: 0;
+}
+
+/* Row headers are desktop-hidden; mobile reveals them */
+.spread-row-header {
+  display: none;
 }
 
 .spread-card {
@@ -1236,13 +1249,65 @@ body {
     50% { box-shadow: 0 4px 32px #c9a84c99; }
   }
 
-  /* Card table: shrink cells further and allow horizontal scroll if needed */
+  /* Card table: reflow into a 3-column layout with labelled sections */
   .card-table {
-    --cw: clamp(52px, 15vw, 96px);
-    overflow-x: auto;
-    max-width: 100vw;
+    --cw: clamp(80px, 28vw, 110px);
+    --cg: 8px;
+    grid-template-columns: repeat(3, var(--cw));
+    grid-template-rows: auto;
     padding: 0.5rem 0;
+    overflow-x: visible;
+    max-width: 100vw;
+    row-gap: 0.5rem;
   }
+
+  /* Section headers span all 3 columns */
+  .spread-row-header {
+    display: flex;
+    align-items: center;
+    grid-column: 1 / 4;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c9a84c;
+    opacity: 0.85;
+    padding: 0.4rem 0 0.1rem;
+    gap: 0.5rem;
+  }
+  .spread-row-header::before,
+  .spread-row-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #c9a84c55);
+  }
+  .spread-row-header::after {
+    background: linear-gradient(270deg, transparent, #c9a84c55);
+  }
+
+  /* Header placement */
+  .spread-row-header--future-a { grid-row: 1; }
+  .spread-row-header--future-b { grid-row: 3; }
+  .spread-row-header--heart    { grid-row: 5; }
+  .spread-row-header--mirror   { grid-row: 7; }
+  .spread-row-header--fate     { grid-row: 9; }
+
+  /* Card placement — override inline gridRow/gridColumn */
+  .card-table .spread-card[data-pos="13"] { grid-row: 2 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="9"]  { grid-row: 2 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="5"]  { grid-row: 2 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="4"]  { grid-row: 4 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="8"]  { grid-row: 4 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="12"] { grid-row: 4 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="2"]  { grid-row: 6 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="1"]  { grid-row: 6 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="3"]  { grid-row: 6 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="14"] { grid-row: 8 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="10"] { grid-row: 8 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="6"]  { grid-row: 8 !important; grid-column: 3 !important; }
+  .card-table .spread-card[data-pos="7"]  { grid-row: 10 !important; grid-column: 1 !important; }
+  .card-table .spread-card[data-pos="11"] { grid-row: 10 !important; grid-column: 2 !important; }
+  .card-table .spread-card[data-pos="15"] { grid-row: 10 !important; grid-column: 3 !important; }
 
   /* Card tooltips: keep them on-screen */
   .card-tooltip {
