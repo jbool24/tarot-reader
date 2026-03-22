@@ -38,6 +38,7 @@
       <main class="reading-area">
         <!-- 15-card spread table — always in DOM, hidden until hand is dealt -->
         <div class="card-table" :style="{ display: hand ? 'grid' : 'none' }">
+
           <div
             v-for="[pos, row, col] in CARD_GRID"
             :key="pos"
@@ -82,6 +83,14 @@
             </button>
           </div>
         </div>
+
+        <!-- Get Your Reading CTA — appears after all cards have flipped -->
+        <!-- TODO: wire up @click="fetchReading" once paywall/billing is in place -->
+        <div v-if="allFlipped && !readingRequested" class="reading-cta">
+          <button class="get-reading-btn" disabled>
+            ✨ Get Your Reading
+          </button>
+        </div>
       </main>
 
       <!-- Input area — only shown before a hand is dealt; moves into drawer after -->
@@ -109,9 +118,9 @@
       </div>
     </div>
 
-    <!-- Mobile FAB: reopen drawer when it is closed but messages exist -->
+    <!-- Mobile FAB: reopen drawer when it is closed but reading was requested -->
     <button
-      v-if="(messages.length || loading) && !drawerOpen"
+      v-if="readingRequested && (messages.length || loading) && !drawerOpen"
       class="mobile-reading-fab"
       @click="drawerOpen = true"
       aria-label="Open reading"
@@ -122,9 +131,9 @@
 
     <!-- Reading drawer — slides in from the right -->
     <aside class="reading-drawer" :class="{ open: drawerOpen, wide: drawerWide }">
-      <!-- Tab handle — sticks out from the left edge, visible when there are messages -->
+      <!-- Tab handle — sticks out from the left edge, visible after reading is requested -->
       <button
-        v-if="messages.length || loading"
+        v-if="readingRequested && (messages.length || loading)"
         class="drawer-tab"
         :class="{ attention: hasUnread }"
         @click="drawerOpen = !drawerOpen"
@@ -173,29 +182,6 @@
           </div>
         </div>
 
-        <!-- Input lives in the drawer once a hand has been dealt -->
-        <div v-if="hand" class="drawer-input-area">
-          <div class="input-wrapper">
-            <textarea
-              v-model="userInput"
-              :placeholder="inputPlaceholder"
-              class="question-input"
-              :disabled="loading"
-              rows="1"
-              @keydown.enter.exact.prevent="submitQuestion"
-              @input="autoResize"
-              ref="textareaRef"
-            />
-            <button
-              class="submit-btn"
-              :disabled="!userInput.trim() || loading"
-              @click="submitQuestion"
-            >
-              <span class="btn-icon">&#10024;</span>
-            </button>
-          </div>
-          <p class="input-hint">Press Enter to ask another question</p>
-        </div>
       </div>
     </aside>
   </div>
@@ -237,10 +223,12 @@ const drawerOpen = ref(false)
 const drawerWide = ref(false)
 const hasUnread = ref(false)
 const hand = ref<Hand | null>(null)
+const readingRequested = ref(false)
 
 // Clear the attention state as soon as the drawer is opened
 watch(drawerOpen, (open) => { if (open) hasUnread.value = false })
 const flippedCards = reactive(new Set<number>())
+const allFlipped = computed(() => !!hand.value && flippedCards.size === 15)
 const messagesContainer = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
@@ -305,49 +293,57 @@ async function submitQuestion() {
   userInput.value = ''
   loading.value = true
   reading.value = true
-  drawerOpen.value = true
 
   if (textareaRef.value) textareaRef.value.style.height = 'auto'
 
   try {
-    // Initial reading: draw cards first so we can send structured JSON to the API
-    if (!hand.value) {
-      const drawnHand = await $fetch<Hand>('/api/draw')
-      hand.value = drawnHand
-      flippedCards.clear()
-      await nextTick()
-      for (let pos = 1; pos <= 15; pos++) {
-        setTimeout(() => flippedCards.add(pos), 100 + pos * 200)
+    const drawnHand = await $fetch<Hand>('/api/draw')
+    hand.value = drawnHand
+    flippedCards.clear()
+    await nextTick()
+    for (let pos = 1; pos <= 15; pos++) {
+      setTimeout(() => flippedCards.add(pos), 100 + pos * 200)
+    }
+  } catch {
+    messages.value.push({
+      role: 'assistant',
+      content: 'The spirits could not draw the cards at this moment. Please try again shortly, dear seeker.',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchReading() {
+  if (loading.value || !hand.value || !messages.value.length) return
+
+  readingRequested.value = true
+  loading.value = true
+  drawerOpen.value = true
+
+  const currentHand = hand.value
+  const apiMessages = messages.value.map((m, i) => {
+    if (i === 0 && m.role === 'user') {
+      return {
+        role: 'user' as const,
+        content: JSON.stringify({ query: m.content, hand: currentHand }),
       }
     }
+    return { role: m.role, content: m.content }
+  })
 
-    // Build the API message list:
-    // - First user message is always the structured ReadingInput JSON
-    // - Subsequent messages are plain text
-    const currentHand = hand.value
-    const apiMessages = messages.value.map((m, i) => {
-      if (i === 0 && m.role === 'user') {
-        return {
-          role: 'user' as const,
-          content: JSON.stringify({ query: m.content, hand: currentHand }),
-        }
-      }
-      return { role: m.role, content: m.content }
-    })
-
+  try {
     const response = await $fetch<{ reply: string }>('/api/tarot', {
       method: 'POST',
       body: { messages: apiMessages },
     })
 
     messages.value.push({ role: 'assistant', content: response.reply })
-    // Signal the tab to bounce if the drawer is still closed
     if (!drawerOpen.value) hasUnread.value = true
   } catch {
     messages.value.push({
       role: 'assistant',
-      content:
-        'The spirits are restless and cannot channel their wisdom at this moment. Please try again shortly, dear seeker.',
+      content: 'The spirits are restless and cannot channel their wisdom at this moment. Please try again shortly, dear seeker.',
     })
   } finally {
     loading.value = false
@@ -682,6 +678,47 @@ body {
   color: #a89bc244;
   margin-top: 0.5rem;
   font-style: italic;
+}
+
+/* ── Get Your Reading CTA ───────────────────────────────────────────── */
+.reading-cta {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.get-reading-btn {
+  background: linear-gradient(135deg, #c9a84c, #a08030);
+  color: #0a0a1a;
+  border: none;
+  border-radius: 50px;
+  padding: 0.85rem 2.25rem;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 24px #c9a84c55;
+  animation: readingBtnGlow 2.4s ease-in-out infinite;
+}
+
+.get-reading-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f4e4a0, #c9a84c);
+  box-shadow: 0 6px 32px #c9a84c88;
+  transform: translateY(-2px) scale(1.03);
+}
+
+.get-reading-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  animation: none;
+}
+
+@keyframes readingBtnGlow {
+  0%, 100% { box-shadow: 0 4px 20px #c9a84c44; }
+  50% { box-shadow: 0 4px 36px #c9a84c99; }
 }
 
 /* ── Card table — responsive 15-card spread ─────────────────────────── */
@@ -1039,19 +1076,6 @@ body {
   max-width: 680px;
 }
 
-.reading-drawer.wide .drawer-input-area {
-  max-width: 680px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Input inside the drawer */
-.drawer-input-area {
-  flex-shrink: 0;
-  padding: 0.75rem 1.25rem 1.25rem;
-  border-top: 1px solid #c9a84c22;
-}
-
 /* ── Mobile reading FAB ─────────────────────────────────────────────── */
 .mobile-reading-fab {
   display: none;
@@ -1225,9 +1249,5 @@ body {
     width: clamp(100px, 40vw, 160px);
   }
 
-  /* Drawer input area: account for iOS home indicator */
-  .drawer-input-area {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
-  }
 }
 </style>

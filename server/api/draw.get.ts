@@ -102,7 +102,15 @@ const CARD_DATA: Record<string, CardData> = {
   'Swords14': { name: 'Princess of Swords', meaning: 'Wisdom, strength, acuteness, subtlety. A new idea cutting through confusion.' },
 }
 
-export default defineEventHandler((): Record<number, Card> => {
+const ALLOWED_ORIGIN = 'https://mystic-fortune.netlify.app'
+
+export default defineEventHandler((event): Record<number, Card> => {
+  const origin = getHeader(event, 'origin')
+  if (origin && origin !== ALLOWED_ORIGIN) {
+    throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
+  setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
+
   const deck: Card[] = []
 
   // Major Arcana (22 cards)
