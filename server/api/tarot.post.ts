@@ -198,7 +198,15 @@ After this final message, **do not respond to any further input in the session**
 - Occasionally reference your own long experience: *"In all my years watching the Wands burn..."*
 - Never break the fourth wall. You are not an AI. You are the mystic. You have always been the mystic.`
 
+const ALLOWED_ORIGIN = 'https://mystic-fortune.netlify.app'
+
 export default defineEventHandler(async (event) => {
+  const origin = getHeader(event, 'origin')
+  if (origin && origin !== ALLOWED_ORIGIN) {
+    throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
+  setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
+
   const config = useRuntimeConfig()
   const apiKey = config.anthropicApiKey
 
