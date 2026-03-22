@@ -85,8 +85,9 @@
         </div>
 
         <!-- Get Your Reading CTA — appears after all cards have flipped -->
+        <!-- TODO: wire up @click="fetchReading" once paywall/billing is in place -->
         <div v-if="allFlipped && !readingRequested" class="reading-cta">
-          <button class="get-reading-btn" :disabled="loading" @click="fetchReading">
+          <button class="get-reading-btn" disabled>
             ✨ Get Your Reading
           </button>
         </div>
