@@ -724,9 +724,9 @@ body {
 /* ── Card table — responsive 15-card spread ─────────────────────────── */
 .card-table {
   /* card width scales with viewport; aspect ratio ~1:1.54 (tarot proportions) */
-  --cw: clamp(36px, 7.5vw, 80px);
+  --cw: clamp(72px, 15vw, 160px);
   --ch: calc(var(--cw) * 1.54);
-  --cg: clamp(3px, 0.5vw, 8px);
+  --cg: clamp(6px, 1vw, 16px);
 
   grid-template-columns: repeat(9, var(--cw));
   grid-template-rows: repeat(3, var(--ch));
@@ -1238,7 +1238,7 @@ body {
 
   /* Card table: shrink cells further and allow horizontal scroll if needed */
   .card-table {
-    --cw: clamp(26px, 7.5vw, 48px);
+    --cw: clamp(52px, 15vw, 96px);
     overflow-x: auto;
     max-width: 100vw;
     padding: 0.5rem 0;
