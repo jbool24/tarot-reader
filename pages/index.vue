@@ -92,13 +92,6 @@
           </div>
         </div>
 
-        <!-- Get Your Reading CTA — appears after all cards have flipped -->
-        <!-- TODO: wire up @click="fetchReading" once paywall/billing is in place -->
-        <div v-if="allFlipped && !readingRequested" class="reading-cta">
-          <button class="get-reading-btn" disabled>
-            ✨ Get Your Reading
-          </button>
-        </div>
       </main>
 
       <!-- Input area — only shown before a hand is dealt; moves into drawer after -->
@@ -164,7 +157,7 @@
           </div>
         </div>
 
-        <div class="messages-container" ref="messagesContainer">
+        <div class="messages-container">
           <div
             v-for="(msg, i) in messages"
             :key="i"
@@ -236,8 +229,6 @@ const readingRequested = ref(false)
 // Clear the attention state as soon as the drawer is opened
 watch(drawerOpen, (open) => { if (open) hasUnread.value = false })
 const flippedCards = reactive(new Set<number>())
-const allFlipped = computed(() => !!hand.value && flippedCards.size === 15)
-const messagesContainer = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 const decorativeCards = [
@@ -304,6 +295,7 @@ async function submitQuestion() {
 
   if (textareaRef.value) textareaRef.value.style.height = 'auto'
 
+  let drawSucceeded = false
   try {
     const drawnHand = await $fetch<Hand>('/api/draw')
     hand.value = drawnHand
@@ -312,6 +304,7 @@ async function submitQuestion() {
     for (let pos = 1; pos <= 15; pos++) {
       setTimeout(() => flippedCards.add(pos), 100 + pos * 200)
     }
+    drawSucceeded = true
   } catch {
     messages.value.push({
       role: 'assistant',
@@ -320,6 +313,8 @@ async function submitQuestion() {
   } finally {
     loading.value = false
   }
+
+  if (drawSucceeded) await fetchReading()
 }
 
 async function fetchReading() {
@@ -340,30 +335,13 @@ async function fetchReading() {
     return { role: m.role, content: m.content }
   })
 
-  try {
-    const response = await $fetch<{ reply: string }>('/api/tarot', {
-      method: 'POST',
-      body: { messages: apiMessages },
-    })
+  // --- INFERENCE DISABLED: log payload for manual demo use ---
+  const payload = { messages: apiMessages }
+  console.log('[tarot] POST /api/tarot payload POJO (copy for demo):', payload)
+  console.log('[tarot] JSON:\n' + JSON.stringify(payload, null, 2))
+  // --- END DISABLED ---
 
-    messages.value.push({ role: 'assistant', content: response.reply })
-    if (!drawerOpen.value) hasUnread.value = true
-  } catch {
-    messages.value.push({
-      role: 'assistant',
-      content: 'The spirits are restless and cannot channel their wisdom at this moment. Please try again shortly, dear seeker.',
-    })
-  } finally {
-    loading.value = false
-    await nextTick()
-    scrollToBottom()
-  }
-}
-
-function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
+  loading.value = false
 }
 </script>
 
