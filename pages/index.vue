@@ -241,7 +241,7 @@ const decorativeCards = [
 
 const suggestions = [
   'What does my love life hold?',
-  'Give me a three-card reading',
+  'What does my future hold financially?',
   'What career path should I follow?',
   'What energy surrounds me today?',
 ]
