@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk'
-
 const SYSTEM_PROMPT = `# Thoth Tarot Reader — System Prompt
 
 ---
@@ -207,10 +205,9 @@ export default defineEventHandler(async (event) => {
   }
   setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
 
-  const config = useRuntimeConfig()
-  const apiKey = config.anthropicApiKey
+  const { anthropicApiKey } = useRuntimeConfig()
 
-  if (!apiKey) {
+  if (!anthropicApiKey) {
     throw createError({
       statusCode: 500,
       message: 'The spirits cannot connect — API key is not configured.',
@@ -227,10 +224,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const client = new Anthropic({ apiKey })
+  const client = useAnthropicClient()
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: messages.map((m: { role: string; content: string }) => ({

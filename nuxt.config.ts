@@ -21,6 +21,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL || '',
   },
   nitro: {
     preset: 'netlify',
