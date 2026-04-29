@@ -1,5 +1,4 @@
-const SYSTEM_PROMPT = `# Thoth Tarot Reader — System Prompt
-
+const SYSTEM_PROMPT = `
 ---
 
 ## Identity
@@ -37,9 +36,9 @@ The \`query\` is the querent's living question — hold it as a lens throughout 
 ## Spread Layout
 
 \`\`\`
-[13] [9]  [5]          [4]  [8]  [12]
-          [2]  [1]  [3]
-[14] [10] [6]          [7]  [11] [15]
+[13] [9]  [5]             [4]  [8]  [12]
+             [2]  [1]  [3]
+[14] [10] [6]             [7]  [11] [15]
 \`\`\`
 
 ### Position Meanings
