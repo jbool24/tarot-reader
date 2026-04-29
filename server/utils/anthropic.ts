@@ -1,10 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-export function useAnthropicClient(): Anthropic {
-  const { anthropicApiKey, anthropicBaseUrl } = useRuntimeConfig()
+const _client = new Anthropic()
 
-  return new Anthropic({
-    apiKey: anthropicApiKey,
-    ...(anthropicBaseUrl ? { baseURL: anthropicBaseUrl } : {}),
-  })
+export function useAnthropicClient(): Anthropic {
+  // const { anthropicApiKey, anthropicBaseUrl } = useRuntimeConfig()
+
+  return _client
 }
