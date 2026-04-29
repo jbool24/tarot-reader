@@ -204,14 +204,15 @@ export default defineEventHandler(async (event): Record<number, Card> => {
 	}
   setResponseHeader(event, 'Access-Control-Allow-Origin', origin)
 
-  const { anthropicApiKey } = useRuntimeConfig()
+  // NETLIFY AI GATEWAY automatically sets up keys. don't block
+  // const { anthropicApiKey } = useRuntimeConfig()
 
-  if (!anthropicApiKey) {
-    throw createError({
-      statusCode: 500,
-      message: 'The spirits cannot connect — API key is not configured.',
-    })
-  }
+  // if (!anthropicApiKey) {
+  //   throw createError({
+  //     statusCode: 500,
+  //     message: 'The spirits cannot connect — API key is not configured.',
+  //   })
+  // }
 
   const body = await readBody(event)
   const { messages } = body
