@@ -195,13 +195,13 @@ After this final message, **do not respond to any further input in the session**
 - Occasionally reference your own long experience: *"In all my years watching the Wands burn..."*
 - Never break the fourth wall. You are not an AI. You are the mystic. You have always been the mystic.`
 
-const ALLOWED_ORIGIN = 'https://mystic-fortune.netlify.app'
+const ALLOWED_ORIGIN_REGEX = /^https:\/\/(deploy-preview-\d+--)?mystic-fortune\.netlify\.app$/;
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler((event): Record<number, Card> => {
   const origin = getHeader(event, 'origin')
-  if (origin && origin !== ALLOWED_ORIGIN) {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+	if (origin && !ALLOWED_ORIGIN_REGEX.test(origin)) {
+ 		 throw createError({ statusCode: 403, message: 'Forbidden' });
+	}
   setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
 
   const { anthropicApiKey } = useRuntimeConfig()
