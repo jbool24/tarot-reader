@@ -103,12 +103,14 @@ const CARD_DATA: Record<string, CardData> = {
 }
 
 const ALLOWED_ORIGIN = 'https://mystic-fortune.netlify.app'
+const ALLOWED_ORIGIN_REGEX = /^https:\/\/(deploy-preview-\d+--)?mystic-fortune\.netlify\.app$/;
+
 
 export default defineEventHandler((event): Record<number, Card> => {
   const origin = getHeader(event, 'origin')
-  if (origin && origin !== ALLOWED_ORIGIN) {
-    throw createError({ statusCode: 403, message: 'Forbidden' })
-  }
+	if (origin && !ALLOWED_ORIGIN_REGEX.test(origin)) {
+ 		 throw createError({ statusCode: 403, message: 'Forbidden' });
+	}
   setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
 
   const deck: Card[] = []
