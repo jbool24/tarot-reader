@@ -335,13 +335,21 @@ async function fetchReading() {
     return { role: m.role, content: m.content }
   })
 
-  // --- INFERENCE DISABLED: log payload for manual demo use ---
-  const payload = { messages: apiMessages }
-  console.log('[tarot] POST /api/tarot payload POJO (copy for demo):', payload)
-  console.log('[tarot] JSON:\n' + JSON.stringify(payload, null, 2))
-  // --- END DISABLED ---
-
-  loading.value = false
+  try {
+    const data = await $fetch<{ reply: string }>('/api/tarot', {
+      method: 'POST',
+      body: { messages: apiMessages },
+    })
+    messages.value.push({ role: 'assistant', content: data.reply })
+    if (!drawerOpen.value) hasUnread.value = true
+  } catch {
+    messages.value.push({
+      role: 'assistant',
+      content: 'The cards grow silent... The spirits were unable to speak at this moment. Please try again shortly, dear seeker.',
+    })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

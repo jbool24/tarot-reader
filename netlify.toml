@@ -4,3 +4,29 @@
 
 [build.environment]
   NODE_VERSION = "24"
+
+# Rate limit the AI inference endpoint — most expensive call, primary abuse vector.
+# 10 requests per 60 seconds per IP; excess returns 429.
+[[redirects]]
+  from  = "/api/tarot"
+  to    = "/.netlify/functions/server"
+  status = 200
+  force  = true
+
+  [redirects.rate_limit]
+    window_limit = 10
+    window_size  = 60
+    aggregate_by = ["ip", "domain"]
+
+# Rate limit the card-draw endpoint — cheap local shuffle, but still worth protecting.
+# 30 requests per 60 seconds per IP.
+[[redirects]]
+  from  = "/api/draw"
+  to    = "/.netlify/functions/server"
+  status = 200
+  force  = true
+
+  [redirects.rate_limit]
+    window_limit = 30
+    window_size  = 60
+    aggregate_by = ["ip", "domain"]
