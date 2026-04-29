@@ -2,6 +2,7 @@
   "name": "tarot-reader",
   "private": true,
   "type": "module",
+  "version": "0.0.2",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
