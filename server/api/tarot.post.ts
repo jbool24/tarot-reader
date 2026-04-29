@@ -197,7 +197,7 @@ After this final message, **do not respond to any further input in the session**
 
 const ALLOWED_ORIGIN_REGEX = /^https:\/\/(deploy-preview-\d+--)?mystic-fortune\.netlify\.app$/;
 
-export default defineEventHandler((event): Record<number, Card> => {
+export default defineEventHandler(async (event): Record<number, Card> => {
   const origin = getHeader(event, 'origin')
 	if (origin && !ALLOWED_ORIGIN_REGEX.test(origin)) {
  		 throw createError({ statusCode: 403, message: 'Forbidden' });
