@@ -202,7 +202,7 @@ export default defineEventHandler(async (event): Record<number, Card> => {
 	if (origin && !ALLOWED_ORIGIN_REGEX.test(origin)) {
  		 throw createError({ statusCode: 403, message: 'Forbidden' });
 	}
-  setResponseHeader(event, 'Access-Control-Allow-Origin', ALLOWED_ORIGIN)
+  setResponseHeader(event, 'Access-Control-Allow-Origin', origin)
 
   const { anthropicApiKey } = useRuntimeConfig()
 
